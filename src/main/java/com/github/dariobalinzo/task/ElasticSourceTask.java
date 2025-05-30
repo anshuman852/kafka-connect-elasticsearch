@@ -251,20 +251,7 @@ public class ElasticSourceTask extends SourceTask {
         }
     }
 
-    /**
-     * Bootstrap the cursor by fetching the latest N docs and setting the cursor to the newest.
-     */
-    private Cursor bootstrapCursorFromLatest(String index, int count) {
-        try {
-            PageResult pageResult = elasticRepository.fetchLatestForCursorBootstrap(index, count);
-            Cursor lastCursor = pageResult.getLastCursor();
-            logger.info("Bootstrapped cursor for index {} to {}", index, lastCursor);
-            return lastCursor;
-        } catch (Exception e) {
-            logger.error("Failed to bootstrap cursor for index {}", index, e);
-            return Cursor.empty();
-        }
-    }
+
         }
     }
 
