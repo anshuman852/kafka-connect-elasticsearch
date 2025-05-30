@@ -62,7 +62,7 @@ jobs:
       - name: Semantic Release (alpha)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx semantic-release --branches main
+        run: npx semantic-release --branches master
 
   release-prod:
     needs: [release-alpha]
@@ -90,4 +90,4 @@ jobs:
       - name: Semantic Release (prod)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx semantic-release --branches main
+        run: npx semantic-release --branches master
