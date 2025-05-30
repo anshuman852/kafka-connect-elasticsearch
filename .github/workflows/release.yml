@@ -25,15 +25,18 @@ jobs:
       - name: Create plugin zip
         run: |
           VERSION="${GITHUB_REF#refs/tags/v}"
-          DIR="kafka-connect-elasticsearch-source-$VERSION"
-          ZIP="kafka-connect-elasticsearch-source-$VERSION.zip"
-          mkdir -p "$DIR"
+          DIR="dariobalinzo-kafka-connect-elasticsearch-source-$VERSION"
+          ZIP="dariobalinzo-kafka-connect-elasticsearch-source-$VERSION.zip"
+          mkdir -p "$DIR/lib" "$DIR/etc" "$DIR/doc" "$DIR/assets"
+          cp manifest.json "$DIR/"
+          cp etc/quickstart-elasticsearch-source.properties "$DIR/etc/"
           JAR=$(ls target/elastic-source-connect-*-jar-with-dependencies.jar | head -n 1)
-          cp "$JAR" "$DIR/"
-          cp README.md "$DIR/"
-          cp LICENSE "$DIR/"
+          cp "$JAR" "$DIR/lib/"
+          cp assets/dariobalinzo.png "$DIR/assets/" || true
+          cp doc/LICENSE "$DIR/doc/" || true
+          cp doc/README.md "$DIR/doc/" || true
           zip -r "$ZIP" "$DIR/"
-          echo "JAR_PATH=$JAR" >> $GITHUB_ENV
+          echo "JAR_PATH=$DIR/lib/$(basename "$JAR")" >> $GITHUB_ENV
           echo "ZIP_PATH=$ZIP" >> $GITHUB_ENV
 
       - name: Get release by tag
