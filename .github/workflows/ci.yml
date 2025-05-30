@@ -32,6 +32,16 @@ jobs:
       
     - name: Build
       run: mvn clean package -DskipTests
+
+    - name: Create plugin zip
+      run: |
+        VERSION=$(git describe --tags --abbrev=0 || echo "dev")
+        DIR="kafka-connect-elasticsearch-source-$VERSION"
+        mkdir -p "$DIR"
+        cp target/elastic-source-connect-*-jar-with-dependencies.jar "$DIR"/
+        cp README.md "$DIR"/
+        cp LICENSE "$DIR"/
+        zip -r "$DIR.zip" "$DIR"/
       
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4

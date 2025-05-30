@@ -21,7 +21,21 @@
       }
     ],
     "@semantic-release/changelog",
-    "@semantic-release/github",
+    [
+      "@semantic-release/github",
+      {
+        "assets": [
+          {
+            "path": "target/elastic-source-connect-*-jar-with-dependencies.jar",
+            "label": "Plugin JAR"
+          },
+          {
+            "path": "kafka-connect-elasticsearch-source-*.zip",
+            "label": "Plugin ZIP"
+          }
+        ]
+      }
+    ],
     [
       "@semantic-release/git",
       {
