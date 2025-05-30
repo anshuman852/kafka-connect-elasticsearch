@@ -8,85 +8,72 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up JDK 11
-      uses: actions/setup-java@v4
-      with:
-        java-version: '11'
-        distribution: 'temurin'
-        
-    - name: Cache Maven dependencies
-      uses: actions/cache@v3
-      with:
-        path: ~/.m2
-        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-        restore-keys: ${{ runner.os }}-m2
-        
-    - name: Build with Maven
-      run: mvn clean package -DskipTests
-      
-    - name: Get version from tag
-      id: get_version
-      run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-      
-    - name: Create plugin zip
-      run: |
-        mkdir -p kafka-connect-elasticsearch-source-${{ steps.get_version.outputs.VERSION }}
-        cp target/elastic-source-connect-*-jar-with-dependencies.jar kafka-connect-elasticsearch-source-${{ steps.get_version.outputs.VERSION }}/
-        cp README.md kafka-connect-elasticsearch-source-${{ steps.get_version.outputs.VERSION }}/
-        cp LICENSE kafka-connect-elasticsearch-source-${{ steps.get_version.outputs.VERSION }}/
-        zip -r kafka-connect-elasticsearch-source-${{ steps.get_version.outputs.VERSION }}.zip kafka-connect-elasticsearch-source-${{ steps.get_version.outputs.VERSION }}/
-        
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ steps.get_version.outputs.VERSION }}
-        body: |
-          ## Changes in this Release
-          
-          ### Features
-          - Cursor bootstrap from latest documents to prevent historical data ingestion
-          - New `bootstrap.latest.docs.count` configuration parameter (default: 10)
-          
-          ### Bug Fixes
-          - Fixed issue where connector would continuously reprocess old documents
-          
-          ### Installation
-          1. Download the plugin zip file
-          2. Extract to your Kafka Connect plugins directory
-          3. Restart Kafka Connect
-          
-          ### Configuration
-          ```properties
-          bootstrap.latest.docs.count=10
-          ```
-        draft: false
-        prerelease: false
-        
-    - name: Upload JAR
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: target/elastic-source-connect-${{ steps.get_version.outputs.VERSION }}-jar-with-dependencies.jar
-        asset_name: kafka-connect-elasticsearch-source-${{ steps.get_version.outputs.VERSION }}.jar
-        asset_content_type: application/java-archive
-        
-    - name: Upload Plugin ZIP
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: kafka-connect-elasticsearch-source-${{ steps.get_version.outputs.VERSION }}.zip
-        asset_name: kafka-connect-elasticsearch-source-${{ steps.get_version.outputs.VERSION }}.zip
-        asset_content_type: application/zip
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 11
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+
+      - name: Build with Maven
+        run: mvn clean package -DskipTests
+
+      - name: Create plugin zip
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          DIR="kafka-connect-elasticsearch-source-$VERSION"
+          mkdir -p "$DIR"
+          cp target/elastic-source-connect-*-jar-with-dependencies.jar "$DIR"/
+          cp README.md "$DIR"/
+          cp LICENSE "$DIR"/
+          zip -r "$DIR.zip" "$DIR"/
+
+      - name: Get release by tag
+        id: get_release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tag = context.ref.replace('refs/tags/', '');
+            const releases = await github.rest.repos.listReleases({
+              owner: context.repo.owner,
+              repo: context.repo.repo
+            });
+            const release = releases.data.find(r => r.tag_name === tag);
+            if (!release) {
+              throw new Error(`Release for tag ${tag} not found`);
+            }
+            core.setOutput('upload_url', release.upload_url);
+
+      - name: Upload JAR
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.get_release.outputs.upload_url }}
+          asset_path: target/elastic-source-connect-*-jar-with-dependencies.jar
+          asset_name: kafka-connect-elasticsearch-source-${{ github.ref_name }}.jar
+          asset_content_type: application/java-archive
+
+      - name: Upload Plugin ZIP
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.get_release.outputs.upload_url }}
+          asset_path: kafka-connect-elasticsearch-source-${{ github.ref_name }}.zip
+          asset_name: kafka-connect-elasticsearch-source-${{ github.ref_name }}.zip
+          asset_content_type: application/zip
+
+      - name: Upload CHANGELOG
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.get_release.outputs.upload_url }}
+          asset_path: CHANGELOG.md
+          asset_name: CHANGELOG.md
+          asset_content_type: text/markdown
