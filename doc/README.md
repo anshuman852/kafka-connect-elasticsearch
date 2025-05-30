@@ -45,7 +45,7 @@ Using kafka connect in distributed way, a sample config file to fetch ``my_aweso
 output topics with ``es_`` prefix:
 
 ```json
-{       
+{
   "name": "elastic-source",
    "config": {
              "connector.class":"com.github.dariobalinzo.ElasticSourceConnector",
@@ -54,7 +54,8 @@ output topics with ``es_`` prefix:
              "es.port" : "9200",
              "index.prefix" : "my_awesome_index",
              "topic.prefix" : "es_",
-             "incrementing.field.name" : "@timestamp"
+             "incrementing.field.name" : "@timestamp",
+             "bootstrap.latest.docs.count": "10"
         }
 }
 ```
@@ -77,6 +78,20 @@ To stop the connector:
 curl -X DELETE localhost:8083/connectors/elastic-source | jq
 ```
 
+### Initial Cursor Bootstrap
+
+When the connector starts and no previous offset is found, it will **not** ingest all historical data. Instead, it fetches the latest N documents (configurable via `bootstrap.latest.docs.count`, default 10), sets the cursor to the newest document, and only processes new documents from that point forward.
+
+#### Property: `bootstrap.latest.docs.count`
+- **Type:** integer
+- **Default:** 10
+- **Importance:** low
+- **Description:** How many latest documents to fetch for initial cursor bootstrap. On first run (no offset), the connector will fetch the latest N documents (sorted by the incrementing field descending), set the cursor to the newest, and only process documents created after that.
+
+**Config example:**
+```properties
+bootstrap.latest.docs.count=10
+```
 ## Documentation
 
 ### Elasticsearch Configuration
@@ -129,6 +144,12 @@ this secondary field is used as a secondary sort field in order
 to avoid data losses when paginating (available starting from versions >= 1.4).
 
 * Type: any
+* Importance: low
+``bootstrap.latest.docs.count``
+How many latest documents to fetch for initial cursor bootstrap. On first run (no offset), the connector will fetch the latest N documents (sorted by the incrementing field descending), set the cursor to the newest, and only process documents created after that.
+
+* Type: int
+* Default: 10
 * Importance: low
 
 

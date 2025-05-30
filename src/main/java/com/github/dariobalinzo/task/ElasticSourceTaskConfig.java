@@ -31,6 +31,7 @@ import java.util.Map;
 public class ElasticSourceTaskConfig extends ElasticSourceConnectorConfig {
 
     static ConfigDef config = baseConfigDef()
+.define("bootstrap.latest.docs.count", Type.INT, 10, Importance.LOW, "How many latest docs to fetch for initial cursor bootstrap")
             .define(INDICES_CONFIG, Type.STRING, Importance.HIGH, INDICES_CONFIG);
 
     public ElasticSourceTaskConfig(Map<String, String> props) {

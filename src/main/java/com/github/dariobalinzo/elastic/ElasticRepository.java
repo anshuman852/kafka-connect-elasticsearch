@@ -58,6 +58,31 @@ public final class ElasticRepository {
         this(elasticConnection, cursorField, null);
     }
 
+/**
+     * Fetch the latest N documents (sorted descending) for initial cursor bootstrap.
+     */
+    public PageResult fetchLatestForCursorBootstrap(String index, int count) throws IOException, InterruptedException {
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
+                .query(matchAllQuery())
+                .size(count)
+                .sort(cursorSearchField, SortOrder.DESC);
+
+        SearchRequest searchRequest = new SearchRequest(index)
+                .source(searchSourceBuilder);
+
+        SearchResponse response = executeSearch(searchRequest);
+
+        List<Map<String, Object>> documents = extractDocuments(response);
+
+        Cursor lastCursor;
+        if (documents.isEmpty()) {
+            lastCursor = Cursor.empty();
+        } else {
+            Map<String, Object> latestDocument = documents.get(0);
+            lastCursor = new Cursor(cursorField.read(latestDocument));
+        }
+        return new PageResult(index, documents, lastCursor);
+    }
     public ElasticRepository(ElasticConnection elasticConnection, String cursorSearchField, String secondaryCursorSearchField) {
         this.elasticConnection = elasticConnection;
         this.cursorSearchField = cursorSearchField;
