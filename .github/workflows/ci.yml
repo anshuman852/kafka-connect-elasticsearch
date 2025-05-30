@@ -48,10 +48,9 @@ jobs:
       with:
         name: kafka-connect-elasticsearch-source
         path: target/*.jar
-  release:
-    needs: test
+  release-alpha:
+    needs: build
     runs-on: ubuntu-latest
-    if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -70,7 +69,40 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Semantic Release (alpha or prod)
+      - name: Semantic Release (alpha)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx semantic-release
+        run: npx semantic-release --branches main
+
+  release-prod:
+    needs: release-alpha
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Set up JDK 11
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Wait for approval before production release
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ secrets.GITHUB_TOKEN }}
+          approvers: ${{ github.actor }}
+          minimum-approvals: 1
+
+      - name: Semantic Release (prod)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx semantic-release --branches main
