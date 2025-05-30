@@ -27,10 +27,12 @@ jobs:
           VERSION="${GITHUB_REF#refs/tags/v}"
           DIR="kafka-connect-elasticsearch-source-$VERSION"
           mkdir -p "$DIR"
-          cp target/elastic-source-connect-*-jar-with-dependencies.jar "$DIR"/
-          cp README.md "$DIR"/
-          cp LICENSE "$DIR"/
-          zip -r "$DIR.zip" "$DIR"/
+          JAR=$(ls target/elastic-source-connect-*-jar-with-dependencies.jar | head -n 1)
+          cp "$JAR" "$DIR/"
+          cp README.md "$DIR/"
+          cp LICENSE "$DIR/"
+          zip -r "$DIR.zip" "$DIR/"
+          echo "JAR_PATH=$JAR" >> $GITHUB_ENV
 
       - name: Get release by tag
         id: get_release
@@ -54,7 +56,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.get_release.outputs.upload_url }}
-          asset_path: target/elastic-source-connect-*-jar-with-dependencies.jar
+          asset_path: ${{ env.JAR_PATH }}
           asset_name: kafka-connect-elasticsearch-source-${{ github.ref_name }}.jar
           asset_content_type: application/java-archive
 
