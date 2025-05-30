@@ -233,8 +233,13 @@ public class ElasticSourceTask extends SourceTask {
             String secondaryCursor = (String) offset.get(POSITION_SECONDARY);
             return new Cursor(primaryCursor, secondaryCursor);
         } else {
-            return Cursor.empty();
-/**
+            // Bootstrap cursor from latest docs if no offset is found
+            int bootstrapCount = config.getInt("bootstrap.latest.docs.count");
+            return bootstrapCursorFromLatest(index, bootstrapCount);
+        }
+    }
+
+    /**
      * Bootstrap the cursor by fetching the latest N docs and setting the cursor to the newest.
      */
     private Cursor bootstrapCursorFromLatest(String index, int count) {
@@ -245,13 +250,7 @@ public class ElasticSourceTask extends SourceTask {
             return lastCursor;
         } catch (Exception e) {
             logger.error("Failed to bootstrap cursor for index {}", index, e);
-            // Bootstrap cursor from latest docs if no offset is found
-            int bootstrapCount = config.getInt("bootstrap.latest.docs.count");
-            return bootstrapCursorFromLatest(index, bootstrapCount);
-        }
-    }
-
-
+            return Cursor.empty();
         }
     }
 
