@@ -1,7 +1,7 @@
-# Kafka Connect Elasticsearch Source
+# Kafka Connect Elasticsearch
 
-[![CI](https://github.com/anshuman852/kafka-connect-elasticsearch-source/workflows/CI/badge.svg)](https://github.com/anshuman852/kafka-connect-elasticsearch-source/actions)
-[![Release](https://github.com/anshuman852/kafka-connect-elasticsearch-source/workflows/Release/badge.svg)](https://github.com/anshuman852/kafka-connect-elasticsearch-source/releases)
+[![CI](https://github.com/anshuman852/kafka-connect-elasticsearch/workflows/CI/badge.svg)](https://github.com/anshuman852/kafka-connect-elasticsearch/actions)
+[![Release](https://github.com/anshuman852/kafka-connect-elasticsearch/workflows/Release/badge.svg)](https://github.com/anshuman852/kafka-connect-elasticsearch/releases)
 
 Kafka Connect Elasticsearch Source: fetch data from elastic-search and sends it to kafka. The connector fetches only new
 data using a strictly incremental / temporal field (like a timestamp or an incrementing id). It supports dynamic schema
