@@ -1,28 +1,35 @@
-# Kafka-connect-elasticsearch-source
+# Kafka Connect Elasticsearch Source
 
-[![YourActionName Actions Status](https://github.com/DarioBalinzo/kafka-connect-elasticsearch-source/workflows/Java%20CI%20with%20Maven/badge.svg)](https://github.com/DarioBalinzo/kafka-connect-elasticsearch-source/actions)
+[![CI](https://github.com/anshuman852/kafka-connect-elasticsearch-source/workflows/CI/badge.svg)](https://github.com/anshuman852/kafka-connect-elasticsearch-source/actions)
+[![Release](https://github.com/anshuman852/kafka-connect-elasticsearch-source/workflows/Release/badge.svg)](https://github.com/anshuman852/kafka-connect-elasticsearch-source/releases)
 
 Kafka Connect Elasticsearch Source: fetch data from elastic-search and sends it to kafka. The connector fetches only new
 data using a strictly incremental / temporal field (like a timestamp or an incrementing id). It supports dynamic schema
 and nested objects/ arrays.
 
-## Requirements:
+## Features
+
+- **Smart Bootstrap**: On first run, fetches only the latest N documents instead of all historical data
+- **Incremental Processing**: Uses strictly incrementing fields for efficient data fetching
+- **Dynamic Schema**: Supports nested objects and arrays
+- **Configurable Filtering**: Whitelist/blacklist fields, JSON casting
+- **Persistent Offsets**: Maintains cursor position across restarts
+
+## Requirements
 
 - Elasticsearch 6.x and 7.x
 - Java >= 8
 - Maven
 
-## Output data serialization format:
+## Installation
 
-The connector uses kafka-connect schema and structs, that are agnostic regarding the user serialization method (e.g. it
-might be Avro or json, etc...).
+### From Release (Recommended)
 
-## Bugs or new Ideas?
+1. Download the latest release from [GitHub Releases](https://github.com/anshuman852/kafka-connect-elasticsearch-source/releases)
+2. Extract the plugin ZIP to your Kafka Connect plugins directory
+3. Restart Kafka Connect
 
-- Issues tracker: https://github.com/DarioBalinzo/kafka-connect-elasticsearch-source/issues
-- Feel free to open an issue to discuss new ideas (or propose new solutions with a PR).
-
-## Installation:
+### From Source
 
 Compile the project with:
 
@@ -30,7 +37,7 @@ Compile the project with:
 mvn clean package -DskipTests
 ```
 
-You can also compile and running both unit and integration tests (docker is mandatory) with:
+You can also compile and run both unit and integration tests (docker is mandatory) with:
 
 ```bash
 mvn clean package
@@ -39,7 +46,9 @@ mvn clean package
 Copy the jar with dependencies from the target folder into connect classpath (
 e.g ``/usr/share/java/kafka-connect-elasticsearch`` ) or set ``plugin.path`` parameter appropriately.
 
-## Example
+## Configuration
+
+### Basic Example
 
 Using kafka connect in distributed way, a sample config file to fetch ``my_awesome_index*`` indices and to produce
 output topics with ``es_`` prefix:
@@ -54,22 +63,25 @@ output topics with ``es_`` prefix:
              "es.port" : "9200",
              "index.prefix" : "my_awesome_index",
              "topic.prefix" : "es_",
-             "incrementing.field.name" : "@timestamp"
+             "incrementing.field.name" : "@timestamp",
+             "bootstrap.latest.docs.count": "10"
         }
 }
 ```
+
+### Kafka Connect Commands
 
 To start the connector with curl:
 
 ```bash
 curl -X POST -H "Content-Type: application/json" --data @config.json http://localhost:8083/connectors | jq
-  ```
+```
 
 To check the status:
 
 ```bash
 curl localhost:8083/connectors/elastic-source/status | jq
-  ```
+```
 
 To stop the connector:
 
@@ -77,7 +89,22 @@ To stop the connector:
 curl -X DELETE localhost:8083/connectors/elastic-source | jq
 ```
 
-## Documentation
+### Initial Cursor Bootstrap
+
+When the connector starts and no previous offset is found, it will **not** ingest all historical data. Instead, it fetches the latest N documents (configurable via `bootstrap.latest.docs.count`, default 10), sets the cursor to the newest document, and only processes new documents from that point forward.
+
+#### Property: `bootstrap.latest.docs.count`
+- **Type:** integer
+- **Default:** 10
+- **Importance:** low
+- **Description:** How many latest documents to fetch for initial cursor bootstrap. On first run (no offset), the connector will fetch the latest N documents (sorted by the incrementing field descending), set the cursor to the newest, and only process documents created after that.
+
+**Config example:**
+```properties
+bootstrap.latest.docs.count=10
+```
+
+## Configuration Reference
 
 ### Elasticsearch Configuration
 
@@ -116,7 +143,6 @@ Elasticsearch password
 * Default: null
 * Importance: high
 
-
 ``incrementing.field.name``
 The name of the strictly incrementing field to use to detect new records.
 
@@ -131,77 +157,56 @@ to avoid data losses when paginating (available starting from versions >= 1.4).
 * Type: any
 * Importance: low
 
+``bootstrap.latest.docs.count``
+How many latest documents to fetch for initial cursor bootstrap. On first run (no offset), the connector will fetch the latest N documents (sorted by the incrementing field descending), set the cursor to the newest, and only process documents created after that.
+
+* Type: int
+* Default: 10
+* Importance: low
 
 ``es.tls.truststore.location``
-Elastic ssl truststore location
+Elasticsearch truststore location
 
 * Type: string
-* Importance: medium
+* Default: null
+* Importance: high
 
 ``es.tls.truststore.password``
-Elastic ssl truststore password
+Elasticsearch truststore password
 
-* Type: string
-* Default: ""
-* Importance: medium
+* Type: password
+* Default: null
+* Importance: high
 
 ``es.tls.keystore.location``
 Elasticsearch keystore location
 
 * Type: string
-* Importance: medium
+* Default: null
+* Importance: high
 
 ``es.tls.keystore.password``
 Elasticsearch keystore password
 
-* Type: string
-* Default: ""
-* Importance: medium
-
-``connection.attempts``
-Maximum number of attempts to retrieve a valid Elasticsearch connection.
-
-* Type: int
-* Default: 3
-* Importance: low
-
-``connection.backoff.ms``
-Backoff time in milliseconds between connection attempts.
-
-* Type: long
-* Default: 10000
-* Importance: low
-
-``index.prefix``
-Indices prefix to include in copying. 
-Periodically, new indices are discovered if they match the pattern.
-
-* Type: string
-* Default: ""
-* Importance: medium
-
-``index.names``
-List of elasticsearch indices: `es1,es2,es3`
-
-* Type: string
+* Type: password
 * Default: null
-* Importance: medium
+* Importance: high
 
 ### Connector Configuration
 
 ``poll.interval.ms``
 Frequency in ms to poll for new data in each index.
 
-* Type: int
+* Type: string
 * Default: 5000
 * Importance: high
 
 ``batch.max.rows``
 Maximum number of documents to include in a single batch when polling for new data.
 
-* Type: int
+* Type: string
 * Default: 10000
-* Importance: low
+* Importance: medium
 
 ``topic.prefix``
 Prefix to prepend to index names to generate the name of the Kafka topic to publish data
@@ -209,39 +214,78 @@ Prefix to prepend to index names to generate the name of the Kafka topic to publ
 * Type: string
 * Importance: high
 
-``filters.whitelist``
-Whitelist filter for extracting a subset of fields from elastic-search json documents. The whitelist filter supports
-nested fields. To provide multiple fields use `;` as separator
-(e.g. `customer;order.qty;order.price`).
+``index.prefix``
+List of indices to include in copying.
 
 * Type: string
+* Default: ""
 * Importance: medium
+
+``index.names``
+List of elasticsearch indices (es1,es2,es3)
+
+* Type: string
 * Default: null
+* Importance: medium
+
+### Filtering Configuration
+
+``filters.whitelist``
+Whitelist filter for fields (e.g. order.qty;order.price;status )
+
+* Type: string
+* Default: null
+* Importance: low
 
 ``filters.blacklist``
-Blacklist filter for extracting a subset of fields from elastic-search json documents. The blacklist filter supports
-nested fields. To provide multiple fields use `;` as separator
-(e.g. `customer;order.qty;order.price`).
+Blacklist filter for fields (e.g. order.qty;order.price;status )
 
 * Type: string
-* Importance: medium
 * Default: null
+* Importance: low
 
 ``filters.json_cast``
-This filter casts nested fields to json string, avoiding parsing recursively as kafka connect-schema. The json-cast
-filter supports nested fields. To provide multiple fields use `;` as separator
-(e.g. `customer;order.qty;order.price`).
+Cast to json string instead of parsing nested objects (e.g. order.qty;order.price;status )
 
 * Type: string
-* Importance: medium
 * Default: null
+* Importance: low
 
 ``fieldname_converter``
-Configuring which field name converter should be used (allowed values: `avro` or `nop`). By default, the avro field name
-converter renames the json fields non respecting the avro
-specifications (https://avro.apache.org/docs/current/spec.html#names)
-in order to be serialized correctly. To disable the field name conversion set this parameter to `nop`.
+Determine which name converter should be used for document fields: avro converter as standard
 
 * Type: string
-* Importance: medium
 * Default: avro
+* Importance: low
+
+## Releases
+
+Releases are automatically created when you push a tag starting with `v` (e.g., `v1.6.0`). The release will include:
+
+- JAR file with dependencies
+- Plugin ZIP file for easy installation
+- Automated release notes
+
+To create a release:
+
+```bash
+git tag v1.6.0
+git push origin v1.6.0
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## License
+
+Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for details.
+
+## Issues and Support
+
+- Issues tracker: https://github.com/anshuman852/kafka-connect-elasticsearch-source/issues
+- Feel free to open an issue to discuss new ideas or report bugs
